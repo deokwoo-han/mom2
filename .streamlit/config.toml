@@ -1,6 +1,6 @@
 [theme]
-primaryColor = "#3EB489"          # 민트 (강조 및 버튼)
-backgroundColor = "#F5FFFA"       # 민트 크림 (배경)
-secondaryBackgroundColor = "#E0FFF0" # 연한 민트 (섹션 배경)
-textColor = "#2F4F4F"             # 다크 슬레이트 그레이 (글자)
+primaryColor = "#3EB489"          # 민트
+backgroundColor = "#F5FFFA"       # 민트 크림
+secondaryBackgroundColor = "#E0FFF0" # 연한 민트
+textColor = "#2F4F4F"
 font = "sans serif"
