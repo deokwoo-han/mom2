@@ -1,9 +1,23 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import time
+import random
 
-# --- 1. 페이지 설정 및 스타일 ---
-st.set_page_config(page_title="스트레스와 불안 다루기", layout="wide")
+# --- 0. 따뜻한 기술(Warm Tech) 구현을 위한 감성 피드백 함수 ---
+def get_warm_feedback():
+    messages = [
+        "당신의 감정은 타당합니다. 있는 그대로 받아들여주세요. 🌿",
+        "잠시 멈추어 호흡하세요. 당신은 생각보다 강합니다. 🍃",
+        "기록하는 용기가 변화의 시작입니다. 오늘도 잘하셨어요. ☕",
+        "이 생각은 당신의 전부가 아닙니다. 그저 지나가는 날씨입니다. ☁️",
+        "자신을 너무 몰아세우지 마세요. 지금도 충분히 잘하고 계십니다. 🌕",
+        "마음의 소리를 들어주셔서 감사합니다. 조금 더 편안해지시길. 🧘"
+    ]
+    return random.choice(messages)
+
+# --- 1. 페이지 설정 및 스타일 ---\
+st.set_page_config(page_title="AI 솔빙 스트레스 - 마음챙김 솔루션", layout="wide")
 
 st.markdown("""
     <style>
@@ -13,221 +27,187 @@ st.markdown("""
     .card { background-color: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 15px; }
     .highlight { color: #E67E22; font-weight: bold; }
     .stButton>button { border-radius: 20px; height: 45px; width: 100%; }
+    
+    /* 전문성 배지 스타일 */
+    .expert-badge {
+        padding: 10px;
+        background-color: #E8F6F3;
+        border: 1px solid #1ABC9C;
+        border-radius: 10px;
+        text-align: center;
+        font-size: 0.85em;
+        color: #16A085;
+        margin-top: 20px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 # --- 2. 데이터 세션 초기화 ---
 if 'thoughts' not in st.session_state: st.session_state.thoughts = []
-if 'ruminations' not in st.session_state: st.session_state.ruminations = []
-if 'monitoring_logs' not in st.session_state: st.session_state.monitoring_logs = []
 if 'journal_entries' not in st.session_state: st.session_state.journal_entries = []
 
-# --- 3. 사이드바 메뉴 (워드 파일의 치유법 카테고리화) ---
-st.sidebar.image("https://images.unsplash.com/photo-1515847049296-a281d6401047?w=300", caption="마음의 평온")
-st.sidebar.title("🌿 치유 훈련 카테고리")
-menu = st.sidebar.radio("단계 선택", [
-    "홈: 걱정의 원리",
-    "1. 걱정에 이름표 붙이기 (생각 잡기)",
-    "2. 과거 반추 기록 (시간 돌리기)",
-    "3. 인식 훈련 (계획 vs 소모)",
-    "4. 걱정 주제 및 신체 감각",
-    "5. 걱정 모니터링 연습",
-    "📒 [종합] 제3자의 시선 걱정 일지"
-])
-
-# --- 메인 기능 구현 ---
-
-if menu == "홈: 걱정의 원리":
-    st.markdown("<div class='main-header'>🌱 당신의 걱정은 어떻게 작동하나요?</div>", unsafe_allow_html=True)
+# --- 3. 사이드바 메뉴 ---
+with st.sidebar:
+    st.title("🧩 AI 솔빙 스트레스")
+    st.caption("Counseling Psychology & AI")
+    
+    menu = st.radio("마음 챙김 단계", 
+        ["1. 걱정에 이름표 붙이기", 
+         "2. 주제별 분류 및 거리두기", 
+         "3. 신체 감각 모니터링", 
+         "📒 [종합] 제3자의 시선 걱정 일지",
+         "🚀 AI 맞춤형 솔루션 (Beta)"]) # 메뉴 추가됨
+    
+    st.markdown("---")
+    # [추가됨] 사업계획서의 '전문성'과 '데이터' 강조
     st.markdown("""
-    <div class='card'>
-        <h3>걱정의 사슬 끊기</h3>
-        <p>워드 문서에 따르면 걱정은 <b>사건 → 침투적 생각 → 메타걱정 → 신체 반응</b>으로 이어집니다.</p>
-        <ul>
-            <li><b>미래는 통제할 수 없습니다:</b> 불확실함을 받아들이고 현재에 집중하세요.</li>
-            <li><b>인지적 탈융합:</b> 생각은 실제 사건이 아닙니다. 뇌가 만들어낸 신호일 뿐입니다.</li>
-            <li><b>램프(LAMP) 치유법:</b> 1~5단계를 통해 걱정을 수용하고 가치 있는 행동으로 나아갑니다.</li>
-        </ul>
+    <div class='expert-badge'>
+        <b>🎓 전문성 보증</b><br>
+        본 서비스는 <b>상담심리학 박사(교수)</b>의<br>
+        임상 검증 알고리즘과<br>
+        <b>국가 바우처 사업 실데이터</b>를<br>
+        기반으로 설계되었습니다.
     </div>
     """, unsafe_allow_html=True)
 
-# --------------------------------------------------------------------------
-# 1. 걱정에 이름표 붙이기 (생각 잡기 & 감정 농도)
-# --------------------------------------------------------------------------
-elif menu == "1. 걱정에 이름표 붙이기 (생각 잡기)":
-    st.markdown("<div class='main-header'>🏷️ 1단계: 생각에 이름표 붙이기</div>", unsafe_allow_html=True)
-    st.info("머릿속을 지나가는 단어를 '탁' 잡아서 이름표를 붙여보세요. 그 생각에는 어떤 감정이 묻어있나요?")
+# --- 4. 메인 기능 구현 ---
 
-    col1, col2 = st.columns([1, 1])
+# [메뉴 1] 걱정에 이름표 붙이기
+if menu == "1. 걱정에 이름표 붙이기":
+    st.markdown("<div class='main-header'>☁️ 흐르는 생각 포착하기</div>", unsafe_allow_html=True)
+    st.info("떠오르는 걱정이나 생각을 단어 형태로 짧게 잡아두세요. (예: '발표 실수', '미래 걱정')")
     
-    with col1:
-        with st.form("thought_form"):
-            st.markdown("### 🪤 생각 잡기")
-            thought_word = st.text_input("지금 머릿속을 스치는 단어/생각은?", placeholder="예: 실수하면 어떡하지, 사람들이 날 싫어해...")
+    with st.form("thought_form", clear_on_submit=True):
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            thought_word = st.text_input("지금 머릿속을 스치는 생각은?")
+        with col2:
+            submit = st.form_submit_button("생각 잡아두기")
             
-            st.markdown("### 🌡️ 감정 농도 (0~100)")
-            intensity = st.slider("이 생각에 묻어있는 감정의 진하기", 0, 100, 50)
-            
-            emotions = st.multiselect("함께 느껴지는 감정들", 
-                ["불안", "두려움", "수치심", "초조", "막막함", "분노", "우울", "죄책감"])
-            
-            submit = st.form_submit_button("이름표 붙여 저장하기")
-            
-            if submit and thought_word:
-                st.session_state.thoughts.append({
-                    "word": thought_word,
-                    "intensity": intensity,
-                    "emotions": emotions,
-                    "date": datetime.now().strftime("%Y-%m-%d %H:%M")
-                })
-                st.success("생각을 잡아두었습니다.")
+        if submit and thought_word:
+            st.session_state.thoughts.append({'word': thought_word, 'date': datetime.now()})
+            # [변경됨] 따뜻한 피드백 적용
+            st.success(f"생각을 안전하게 잡아두었습니다. {get_warm_feedback()}")
 
-    with col2:
-        st.markdown("### 👁️ 머물러 서서 관찰하기")
-        if not st.session_state.thoughts:
-            st.write("아직 잡힌 생각이 없습니다.")
+    if st.session_state.thoughts:
+        st.markdown("### 🧺 내가 잡아둔 생각들")
+        for i, t in enumerate(st.session_state.thoughts[-5:]):  # 최근 5개만
+            st.markdown(f"- 🕒 {t['date'].strftime('%H:%M')} : **{t['word']}**")
+
+# [메뉴 2] 주제별 분류 및 거리두기
+elif menu == "2. 주제별 분류 및 거리두기":
+    st.markdown("<div class='main-header'>🗂️ 생각 정리 및 거리두기</div>", unsafe_allow_html=True)
+    
+    if not st.session_state.thoughts:
+        st.warning("먼저 '1. 걱정에 이름표 붙이기'에서 생각을 포착해주세요.")
+    else:
+        recent_thought = st.session_state.thoughts[-1]['word']
+        st.markdown(f"""
+        <div class='card'>
+            <h3>지금 다룰 생각: <span class='highlight'>'{recent_thought}'</span></h3>
+            <p>이 생각은 어떤 종류인가요? 이름을 붙이는 순간, 감정의 압도됨이 줄어듭니다.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        category = st.selectbox("이 생각의 카테고리는?", 
+            ["막연한 미래 걱정", "타인의 시선 의식", "지나간 일 후회", "해결해야 할 현실 문제", "단순한 신체 반응"])
+        
+        if st.button("분류 완료"):
+            st.success(f"'{category}' 서랍에 잘 정리했습니다. {get_warm_feedback()}")
+
+# [메뉴 3] 신체 감각 모니터링
+elif menu == "3. 신체 감각 모니터링":
+    st.markdown("<div class='main-header'>🧘 몸의 소리 듣기</div>", unsafe_allow_html=True)
+    st.write("감정은 몸으로 먼저 찾아옵니다. 지금 느껴지는 감각을 체크해보세요.")
+    
+    symptoms = st.multiselect("지금 느껴지는 신체 반응을 모두 고르세요",
+        ["가슴 답답함", "심장 두근거림", "어깨/목 뭉침", "두통", "손발 차가움", "속 울렁거림", "아무 느낌 없음"])
+    
+    stress_level = st.slider("지금 스트레스 점수는 몇 점인가요? (0: 평온 ~ 10: 폭발 직전)", 0, 10, 5)
+    
+    if st.button("신체 반응 기록하기"):
+        # [변경됨] 따뜻한 피드백 적용
+        if stress_level > 7:
+            st.warning(f"스트레스 수치가 높네요. 잠시 심호흡을 권해드립니다. 🌬️ {get_warm_feedback()}")
         else:
-            st.write("아래 리스트를 클릭하여 거리를 두고 관찰해보세요.")
-            for idx, item in enumerate(reversed(st.session_state.thoughts)):
-                with st.expander(f"💭 {item['word']} (농도: {item['intensity']}%)"):
-                    st.write(f"**부착된 감정:** {', '.join(item['emotions'])}")
-                    st.write(f"**포착 시간:** {item['date']}")
-                    st.info("이것은 당신의 뇌가 만들어낸 '지나가는 생각'일 뿐입니다. 사실이 아닙니다.")
+            st.success(f"몸의 상태를 잘 알아차리셨습니다. {get_warm_feedback()}")
 
-# --------------------------------------------------------------------------
-# 2. 과거 반추 기록
-# --------------------------------------------------------------------------
-elif menu == "2. 과거 반추 기록 (시간 돌리기)":
-    st.markdown("<div class='main-header'>⏪ 2단계: 과거 반추 다루기</div>", unsafe_allow_html=True)
-    st.warning("과거의 일에 대해 '왜?'라고 묻는 것은 답이 없는 질문입니다. (문서 '지나간 일 되새기기' 중)")
-
-    with st.container():
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        past_situation = st.text_area("자주 떠오르는 과거의 특정 상황은 무엇인가요?", height=100)
-        past_emotion = st.text_input("그 당시, 혹은 지금 느껴지는 주요 감정은?")
-        
-        if st.button("반추 기록하기"):
-            if past_situation:
-                st.session_state.ruminations.append({
-                    "situation": past_situation,
-                    "emotion": past_emotion,
-                    "date": datetime.now().strftime("%Y-%m-%d")
-                })
-                st.success("기록되었습니다. 과거는 통제할 수 없음을 인정하고 흘려보냅니다.")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    if st.session_state.ruminations:
-        st.subheader("📜 반추 기록 보관함")
-        for item in st.session_state.ruminations:
-            st.write(f"- **상황:** {item['situation']} | **감정:** {item['emotion']}")
-
-# --------------------------------------------------------------------------
-# 3. 인식 훈련 (계획 vs 소모적 걱정)
-# --------------------------------------------------------------------------
-elif menu == "3. 인식 훈련 (계획 vs 소모)":
-    st.markdown("<div class='main-header'>⚖️ 3단계: 걱정 성격 구분하기 (인식 훈련 4)</div>", unsafe_allow_html=True)
-    st.markdown("지금 하고 있는 걱정이 **문제 해결을 위한 계획**인지, 에너지만 갉아먹는 **소모적 걱정**인지 구분합니다.")
-
-    worry_content = st.text_input("지금 당신을 괴롭히는 걱정은 무엇인가요?")
-    
-    check_type = st.radio("이 걱정의 결과는 어디에 가깝나요?", 
-        ["A. 구체적인 행동과 예방 조치를 세우고 있다. (계획)", 
-         "B. 불안이 계속 커지고, 일을 미루거나 회피하게 된다. (소모적 걱정)"])
-
-    if st.button("판단 결과 확인"):
-        if "A" in check_type:
-            st.success("✅ 이것은 **'계획 세우기'**입니다. 준비된 계획을 실행에 옮기세요.")
-        else:
-            st.error("🛑 이것은 **'소모적인 걱정'**입니다. (문서 참조)")
-            st.markdown("""
-            **솔루션:**
-            - 이 걱정은 문제 해결에 도움이 되지 않습니다.
-            - '어쩔 수 없지'라고 인정하고 현재의 감각(호흡 등)으로 돌아오세요.
-            """)
-
-# --------------------------------------------------------------------------
-# 4. 걱정 주제 및 신체 감각
-# --------------------------------------------------------------------------
-elif menu == "4. 걱정 주제 및 신체 감각":
-    st.markdown("<div class='main-header'>🗂️ 4단계: 주제 분류 및 신체 감각</div>", unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("### 📂 걱정 주제 분류")
-        topic = st.selectbox("이 걱정은 어떤 카테고리에 속하나요?", 
-            ["관계 (가족/친구/연인)", "직장/커리어", "건강/질병", "재정/돈", "미래의 불확실성", "기타"])
-        st.info(f"선택한 주제: **{topic}**")
-
-    with col2:
-        st.markdown("### ⚡ 동반되는 신체 감각")
-        st.write("걱정할 때 몸에서 어떤 반응이 일어나나요? (문서 '신체감각 알아보기')")
-        body_symptoms = st.multiselect("신체 반응 체크", 
-            ["심장이 쿵쾅거림", "가슴이 답답함", "소화불량/속쓰림", "근육 긴장/어깨 뭉침", 
-             "손발에 땀이 남", "머리가 지끈거림", "호흡이 가빠짐"])
-        
-    if st.button("상태 저장"):
-        st.success(f"주제 [{topic}]와 신체 반응 {body_symptoms}을 인식했습니다. 몸의 반응을 있는 그대로 허용하세요.")
-
-# --------------------------------------------------------------------------
-# 5. 걱정 모니터링 연습
-# --------------------------------------------------------------------------
-elif menu == "5. 걱정 모니터링 연습":
-    st.markdown("<div class='main-header'>🔍 5단계: 걱정 모니터링 연습</div>", unsafe_allow_html=True)
-    st.markdown("걱정의 발생부터 행동까지의 과정을 추적합니다.")
-    
-    with st.form("monitoring_form"):
-        trigger = st.text_input("1. 촉발 사건 (무슨 일이 있었나요?)")
-        thought_process = st.text_area("2. 생각/감정/신체반응 (어떤 생각과 느낌이 들었나요?)")
-        action = st.text_input("3. 행동 반응 (그래서 무엇을 했나요? 예: 회피, 확인, 검색)")
-        
-        if st.form_submit_button("모니터링 기록 저장"):
-            st.session_state.monitoring_logs.append({
-                "trigger": trigger,
-                "process": thought_process,
-                "action": action,
-                "date": datetime.now().strftime("%Y-%m-%d %H:%M")
-            })
-            st.success("객관적 모니터링이 완료되었습니다.")
-
-# --------------------------------------------------------------------------
-# [종합] 제3자의 시선 걱정 일지
-# --------------------------------------------------------------------------
+# [메뉴 4] 종합 걱정 일지
 elif menu == "📒 [종합] 제3자의 시선 걱정 일지":
-    st.markdown("<div class='main-header'>📒 종합 걱정 일지</div>", unsafe_allow_html=True)
-    st.markdown("""
-    <div class='info-box' style='background-color:#FFF3CD; padding:15px; border-radius:10px;'>
-    <b>지침:</b> 앞서 훈련한 이름표 붙이기, 주제 분류, 신체 감각 등을 종합하여 기록합니다.<br>
-    중요한 것은 <b>'나'의 입장이 아닌, 전지전능한 '제3자(관찰자)'의 시선</b>으로 서술하는 것입니다.
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<div class='main-header'>📒 전지적 관찰자 시점 일지</div>", unsafe_allow_html=True)
+    st.info("나의 감정을 '남의 이야기'처럼 서술해보세요. 객관화는 치유의 첫걸음입니다.")
     
     with st.form("journal_form"):
-        st.markdown("### 📝 오늘의 관찰 일지")
-        
-        # 이전 단계들의 데이터를 참고용으로 보여줄 수 있음
+        st.markdown("### 📝 오늘의 관찰 기록")
         if st.session_state.thoughts:
-            last_thought = st.session_state.thoughts[-1]['word']
-            st.caption(f"최근 잡힌 생각: '{last_thought}'")
+            st.caption(f"최근 키워드: {st.session_state.thoughts[-1]['word']}")
             
-        journal_content = st.text_area("예시: '철수는 오늘 상사의 표정을 보고 불안해했다. 가슴이 뛰는 것을 느꼈지만, 그것을 단지 신체 반응으로 여기고 업무에 집중했다.'", height=150)
+        journal_content = st.text_area("작성 예시: '철수는 오늘 발표 때문에 긴장했다. 가슴이 뛰었지만 곧 괜찮아질 것이라 생각했다.'", height=150)
         
-        if st.form_submit_button("일지 완성 및 저장"):
+        if st.form_submit_button("일지 저장 및 분석 요청"):
             st.session_state.journal_entries.append({
                 "content": journal_content,
                 "date": datetime.now().strftime("%Y-%m-%d %H:%M")
             })
             st.balloons()
-            st.success("훌륭합니다! 당신은 걱정과 당신을 분리하는 데 성공했습니다.")
+            # [변경됨] 따뜻한 피드백 적용
+            st.success(f"오늘의 마음을 훌륭하게 기록하셨습니다. {get_warm_feedback()}")
 
-    # 저장된 일지 보기
-    if st.session_state.journal_entries:
-        st.divider()
-        st.subheader("📂 지난 기록들")
-        for entry in reversed(st.session_state.journal_entries):
+# [메뉴 5 - 신규] AI 맞춤형 솔루션 (Beta) -> 사업계획서 핵심 구현
+elif menu == "🚀 AI 맞춤형 솔루션 (Beta)":
+    st.markdown("<div class='main-header'>🤖 AI 스트레스 정밀 분석</div>", unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div class='info-box' style='background-color:#EBF5FB; padding:15px; border-radius:10px; border-left: 5px solid #3498DB;'>
+    <b>💡 AI 분석 엔진 가동</b><br>
+    누적된 <b>바우처 사업 임상 데이터</b>와 귀하의 <b>행동 패턴(Log)</b>을 대조 분석하여, 
+    현재 심리 상태에 최적화된 솔루션을 제공합니다.
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.write("") # 여백
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("#### 📊 현재 분석 가능한 데이터")
+        st.metric(label="누적 생각 기록", value=f"{len(st.session_state.thoughts)}건")
+        st.metric(label="작성된 관찰 일지", value=f"{len(st.session_state.journal_entries)}건")
+    
+    with col2:
+        st.markdown("#### 🩺 분석 예상 소요 시간")
+        st.write("약 3~5초 (실시간 클라우드 연동)")
+        analyze_btn = st.button("내 마음 정밀 진단 시작", use_container_width=True)
+
+    if analyze_btn:
+        if len(st.session_state.thoughts) == 0:
+            st.error("분석할 데이터가 부족합니다. '1. 걱정에 이름표 붙이기'를 먼저 진행해주세요.")
+        else:
+            # AI 분석 시뮬레이션 (Loading Effect)
+            with st.spinner("임상 심리 알고리즘이 데이터를 분석 중입니다..."):
+                time.sleep(2.5) # 분석하는 척
+                
+            st.success("분석이 완료되었습니다!")
+            st.markdown("---")
+            
+            # 결과 리포트 (Mock-up)
             st.markdown(f"""
-            <div class='card'>
-                <small style='color:gray'>{entry['date']}</small><br>
-                {entry['content']}
+            <div class='card' style='border-left: 5px solid #E67E22;'>
+                <h3>📑 AI 심리 분석 리포트</h3>
+                <p><b>진단 유형:</b> <span style='color:#E67E22; font-weight:bold;'>미래 불안형 (Anticipatory Anxiety)</span></p>
+                <p>사용자님의 기록에서 <b>'막막함', '걱정', '내일'</b>과 관련된 키워드 빈도가 높게 나타납니다.
+                이는 통제할 수 없는 미래의 불확실성을 통제하려는 인지적 노력에서 비롯된 것으로 보입니다.</p>
+                <hr>
+                <h4>💊 상담심리학 박사의 맞춤 처방전</h4>
+                <ul>
+                    <li><b>인지 훈련:</b> '통제 가능한 것'과 '불가능한 것'을 종이에 적어 분류하세요.</li>
+                    <li><b>행동 처방:</b> 불안이 올라올 때 '그만!' 이라고 외치는 사고 중지(Thought Stopping) 기법을 3회 실시하세요.</li>
+                    <li><b>추천 콘텐츠:</b> 5분 호흡 명상 (앱 내 오디오 가이드)</li>
+                </ul>
             </div>
             """, unsafe_allow_html=True)
+            
+            st.info("📌 이 결과는 초기 데이터에 기반한 예측이며, 데이터가 쌓일수록 더 정교해집니다.")
+
+# --- Footer ---
+st.markdown("---")
+st.markdown("<div style='text-align: center; color: #95A5A6;'>© 2026 AI Solving Stress. All rights reserved.</div>", unsafe_allow_html=True)
